@@ -1,0 +1,69 @@
+{% from "components/input.html" import inputForm with context %}
+{% from "components/select.html" import selectForm with context %}
+<div id="register"
+     class=" animate-fadein flex flex-col items-center justify-center px-6 pt-8 mx-auto md:h-screen pt:mt-0 dark:bg-gray-900">
+    <a href="/" class="flex items-center justify-center mb-8 text-2xl font-semibold lg:mb-10 dark:text-white">
+        <!--        <img src="/images/logo.svg" class="mr-4 h-11" alt="FlowBite Logo">-->
+        <span>Register Akun</span>
+    </a>
+
+    <!-- Card -->
+    <div class="w-full max-w-xl p-6  align-center justify-center space-y-8 sm:p-8 bg-white rounded-lg shadow dark:bg-gray-800">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+            Register Akun
+        </h2>
+
+        <div id="message"></div>
+        <!--        <br>-->
+        <form class="mt-8 space-y-6" method="post" action="{{ url_for('register') }}">
+            {{ inputForm('Nama', 'nama', 'Enter your name') }}
+            {{ inputForm('Username', 'username', 'Enter your username') }}
+            {{ inputForm('Password', 'password', '••••••••') }}
+
+            <div>
+                <button type="submit" id="registerButton"
+                        class="w-full px-5 py-3 text-base font-medium text-center text-white
+                        bg-primary-700 rounded-lg hover:bg-primary-800 focus:ring-4 focus:ring-primary-300
+                        sm:w-auto dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+                    Daftar
+                </button>
+            </div>
+        </form>
+    </div>
+
+
+    <script>
+        // $(document).ready(function () {
+        //     $('#registerButton').click(function (event) {
+        //         event.preventDefault();
+        //         var formData = {
+        //             nama: $('#nama').val(),
+        //             username: $('#username').val(),
+        //             password: $('#password').val(),
+        //         };
+        //
+        //         $.ajax({
+        //             url: '/register',
+        //             type: 'POST',
+        //             contentType: 'application/json',
+        //             data: JSON.stringify(formData),
+        //             success: function (data) {
+        //                 if (data.message) {
+        //                     $('#message').html('<p style="color: green;">' + data.message + '</p> <br>');
+        //
+        //                     setTimeout(function () {
+        //                         window.location.href = '/';
+        //                     }, 2000);
+        //                 } else if (data.error) {
+        //                     $('#message').html('<p style="color: red;">' + data.error + '</p> <br>');
+        //                 }
+        //             },
+        //             error: function (xhr, status, error) {
+        //                 console.error('Error:', error);
+        //                 $('#message').html('<p style="color: red;">Error: ' + error + '</p> <br>');
+        //             }
+        //         });
+        //     });
+        // });
+    </script>
+</div>
