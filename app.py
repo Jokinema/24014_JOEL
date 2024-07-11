@@ -302,14 +302,14 @@ def schedulerApi():
         if not scheduler_data:
             return jsonify({"message": "No scheduler data found"}), 404
 
-        now = datetime.now()
-        end_time = scheduler_data.end_time if scheduler_data.end_time else now
-        state = "overdue" if now > end_time else "underdue"
+        # now = datetime.now()
+        # end_time = scheduler_data.end_time if scheduler_data.end_time else now
+        # state = "overdue" if now > end_time else "underdue"
 
         return jsonify({
-            "start_time": scheduler_data.start_time,
-            "end_time": scheduler_data.end_time,
-            "state": state
+            "start_time": str(scheduler_data.start_time),
+            "end_time": str(scheduler_data.end_time),
+            # "state": state
         }), 200
 
 
