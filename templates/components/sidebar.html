@@ -64,61 +64,34 @@
             </div>
             <!-- Modal body -->
             <div class="p-4 md:p-5">
-                <div class="grid grid-cols-1 px-4 pt-6 mb-4 xl:grid-cols-2 xl:gap-4 dark:border-gray-700">
-                    <div class="p-4 mb-4 bg-white rounded-lg shadow sm:p-6 xl:p-8 dark:bg-gray-800 xl:mb-0">
+                <div class="grid grid-cols-1 px-4 pt-6 mb-4 xl:grid-cols-1 xl:gap-4 dark:border-gray-700">
+                    <div class="m-4 p-4 mb-4 bg-white rounded-lg shadow sm:p-6 xl:p-8 dark:bg-gray-800 xl:mb-0">
                         <a href="" class="flex items-center mb-6 text-2xl   dark:text-gray-400">
                             <span class=""> Logging Activity Sistem </span>
                         </a>
-                        <p class="mb-2 text-base font-normal text-gray-500 dark:text-gray-400">
-
-                           <div class="p-4 mb-4 bg-white rounded-lg shadow sm:p-6 xl:p-8 dark:bg-gray-800 xl:mb-0">
-        <a href="" class="flex items-center mb-6 text-2xl   dark:text-gray-400">
-            <span class=""> Table Alert </span>
-        </a>
-        <p class="mb-2 text-base font-normal text-gray-500 dark:text-gray-400">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-            <thead class="bg-gray-50 dark:bg-gray-700">
-            <tr>
-                <th scope="col"
-                    class="p-4 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-white">
-                    No
-                </th>
-                <th scope="col"
-                    class="p-4 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-white">
-                    Timestamp
-                </th>
-                <th scope="col"
-                    class="p-4 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-white">
-                    Status Alert
-                </th>
-            </tr>
-            </thead>
-            <tbody class="bg-white dark:bg-gray-800">
-            <tr>
-                <td class="p-4 text-sm font-normal text-gray-900 whitespace-nowrap dark:text-white">
-                    1
-                </td>
-                <td class="p-4 text-sm font-normal text-gray-500 whitespace-nowrap dark:text-gray-400">
-                    Apr 23 ,2021
-                </td>
-
-                <td class="p-4 whitespace-nowrap">
-                      <span
-                              class="bg-red-100 text-red-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-md dark:bg-gray-700 dark:text-red-400 border border-red-100 dark:border-red-500">Danger</span>
-                </td>
-            </tr>
-
-            </tbody>
-        </table>
-        </p>
-        <p class="text-sm font-semibold text-gray-900 dark:text-gray-400">
-        </p>
-        <div class="mt-6 space-y-4 sm:flex sm:space-y-0 sm:space-x-3">
-
-        </div>
-    </div>
-
-                        </p>
+                        <div class="relative overflow-x-auto p-5 m-2 bg-gray-50 dark:bg-gray-700">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600" id="alert-table-modals">
+                                <thead class="">
+                                <tr>
+                                    <th scope="col"
+                                        class="p-4 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-white">
+                                        No
+                                    </th>
+                                    <th scope="col"
+                                        class="p-4 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-white">
+                                        Timestamp
+                                    </th>
+                                    <th scope="col"
+                                        class="p-4 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-white">
+                                        Status Alert
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody id="alert-table-modal" class="bg-white dark:bg-gray-800">
+                                <!-- Rows will be inserted here by jQuery -->
+                                </tbody>
+                            </table>
+                        </div>
                         <p class="text-sm font-semibold text-gray-900 dark:text-gray-400">
                         </p>
                         <div class="mt-6 space-y-4 sm:flex sm:space-y-0 sm:space-x-3">
@@ -131,16 +104,23 @@
                         </a>
                         <p class="mb-2 text-base font-normal text-gray-500 dark:text-gray-400">
                         <form class="space-y-4" action="#">
-                    <div>
-                        <label for="email" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Waktu Mulai</label>
-                        <input type="time" name="email" id="email" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" placeholder="name@company.com" required />
-                    </div>
-                    <div>
-                        <label for="password" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Waktu Akhir</label>
-                        <input type="time" name="password" id="password" placeholder="••••••••" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" required />
-                    </div>
+                            <div>
+                                <label for="start_time" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Waktu
+                                    Mulai</label>
+                                <input type="time" name="start_time" id="start_time"
+                                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                                       placeholder="name@company.com" required/>
+                            </div>
+                            <div>
+                                <label for="end_time"
+                                       class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Waktu
+                                    Akhir</label>
+                                <input type="time" name="end_time" id="end_time"
+                                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                                       required/>
+                            </div>
 
-                </form>
+                        </form>
                         </p>
                         <p class="text-sm font-semibold text-gray-900 dark:text-gray-400">
                         </p>
@@ -149,7 +129,7 @@
                         </div>
                     </div>
                 </div>
-                <button class="text-white inline-flex w-full justify-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-600 dark:hover:bg-gray-400 dark:focus:ring-gray-800">
+                <button id="save-scheduler-btn" class="text-white inline-flex w-full justify-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-600 dark:hover:bg-gray-400 dark:focus:ring-gray-800">
                     Save/Update Scheduler
                 </button>
             </div>
@@ -157,3 +137,47 @@
         </div>
     </div>
 </div>
+
+
+<script>
+    $(document).ready(function () {
+        $('#alert-table-modals').DataTable({
+            "paging": true,  // Aktifkan paging
+            "lengthChange": false,  // Tampilkan dropdown perubahan panjang halaman
+            "searching": true,  // Aktifkan kotak pencarian
+            "ordering": true,  // Aktifkan pengurutan kolom
+            "info": true,  // Tampilkan informasi halaman
+            "autoWidth": false,  // Nonaktifkan lebar otomatis
+            "responsive": true  // Aktifkan responsif
+        });
+
+        $('#save-scheduler-btn').click(function () {
+           var start_time = $('#start_time').val();
+            var end_time = $('#end_time').val();
+
+            // Menyiapkan data JSON untuk dikirim ke server
+            var data = JSON.stringify({
+                "start_time": start_time,
+                "end_time": end_time
+            });
+
+            // Mengirim permintaan POST ke endpoint Flask
+            $.ajax({
+                url: '/scheduler',
+                type: 'POST',
+                contentType: 'application/json',
+                data: data,
+                success: function (response) {
+                    // Memproses respons dari server jika berhasil
+                    console.log('Scheduler updated successfully');
+                    // Misalnya, tampilkan pesan sukses ke pengguna atau lakukan tindakan lain
+                },
+                error: function (xhr, status, error) {
+                    // Menangani kesalahan jika permintaan gagal
+                    console.error('Error updating scheduler:', error);
+                    // Misalnya, tampilkan pesan kesalahan kepada pengguna
+                }
+            });
+        });
+    });
+</script>
