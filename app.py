@@ -6,52 +6,80 @@ import av
 from datetime import datetime
 import random
 
+from flask_sqlalchemy import SQLAlchemy
+
 app = Flask(__name__)
 app.secret_key = 'joel_app'  # Ganti dengan kunci rahasia Anda
+url = "rtsp://admin:qwerty123@192.168.0.230:554/user=admin&password=qwerty123&channel=1&stream=0.sdp?"
+
+# Konfigurasi database
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:@192.168.5.1/joelapp'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# In-memory user storage (replace with database in production)
-users = {}
 
-# User model
-class User(UserMixin):
-    def __init__(self, id, username, password):
-        self.id = id
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nama = db.Column(db.String(256), unique=True, nullable=False)
+    username = db.Column(db.String(256), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+
+    def __init__(self, nama, username, password):
+        self.nama = nama
         self.username = username
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+class Alert(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.now, nullable=False)
+    status = db.Column(db.String(150), nullable=False)
+
+    def __init__(self, status):
+        self.status = status
+
+class SchedulerData(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    start_time = db.Column(db.Time, nullable=True)
+    end_time = db.Column(db.Time, nullable=True)
+
+class SensorState(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    pm25_state = db.Column(db.Boolean, nullable=False)
+    rcwl_state = db.Column(db.Boolean, nullable=False)
+    lock_state = db.Column(db.Boolean, nullable=False)
+
+    def __init__(self, pm25_state=False, rcwl_state=False, lock_state=False):
+        self.pm25_state = pm25_state
+        self.rcwl_state = rcwl_state
+        self.lock_state = lock_state
+
+# Buat semua tabel
+with app.app_context():
+    db.create_all()
+
+
+
 # Login manager
 @login_manager.user_loader
 def load_user(user_id):
-    return users.get(user_id)
+    with app.app_context():
+        return db.session.get(User, int(user_id))
+
 
 # Mock URL RTSP (replace this with a local video file for testing if needed)
-url = "rtsp://admin:qwerty123@192.168.0.230:554/user=admin&password=qwerty123&channel=1&stream=0.sdp?"
 
-# In-memory storage for scheduler data
-scheduler_data = {
-    "start_time": None,
-    "end_time": None
-}
-
-# In-memory storage for lock state
-lock_state = 1
-
-# Mock data for testing purposes
-sensor_states = {
-    "pm25_state": str(random.randint(0, 1)),
-    "rcwl_state": str(random.randint(0, 1)),
-    "lock_state": str(lock_state)
-}
 
 @app.route('/')
-# @login_required
+@login_required
 def index():
     return render_template('routes/dashboard/index.html')
 
@@ -60,7 +88,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        user = next((u for u in users.values() if u.username == username), None)
+        user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
             login_user(user)
             return redirect(url_for('index'))
@@ -68,51 +96,70 @@ def login():
     return render_template('routes/index.html')
 
 @app.route('/logout')
-# @login_required
+@login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
 
 @app.route('/sensor_data')
-# @login_required
+@login_required
 def sensor_data():
-    global sensor_states, lock_state
+    sensor_data = SensorState.query.order_by(SensorState.id.desc()).first()
+    if not sensor_data:
+        sensor_data = SensorState(pm25_state=False, rcwl_state=False, lock_state=False)
+        db.session.add(sensor_data)
+        db.session.commit()
     now = datetime.now().isoformat()
     data = [
-        {"created_at": now, "name": "pm25_state", "value": sensor_states["pm25_state"]},
-        {"created_at": now, "name": "rcwl_state", "value": sensor_states["rcwl_state"]},
-        {"created_at": now, "name": "lock_state", "value": str(lock_state)}
+        {"created_at": now, "name": "pm25_state", "value": str(int(sensor_data.pm25_state))},
+        {"created_at": now, "name": "rcwl_state", "value": str(int(sensor_data.rcwl_state))},
+        {"created_at": now, "name": "lock_state", "value": str(int(sensor_data.lock_state))}
     ]
     return jsonify(data)
 
 @app.route('/toggle_lock_state', methods=['POST'])
-# @login_required
+@login_required
 def toggle_lock_state():
-    global lock_state
-    lock_state = 1 - lock_state  # Toggle the lock state
-    sensor_states["lock_state"] = str(lock_state)
-    return jsonify({"message": "Lock state toggled successfully", "lock_state": lock_state})
+    sensor_data = SensorState.query.order_by(SensorState.id.desc()).first()
+    if sensor_data:
+        sensor_data.lock_state = not sensor_data.lock_state
+        db.session.commit()
+        new_alert = Alert(status="State Lock Change Detected")
+        db.session.add(new_alert)
+        db.session.commit()
+
+        return jsonify({"message": "Lock state toggled successfully", "lock_state": sensor_data.lock_state})
+
+
+    return jsonify({"message": "No sensor data found"}), 404
+
 
 @app.route('/scheduler', methods=['GET', 'POST'])
-# @login_required
+@login_required
 def scheduler():
     if request.method == 'POST':
-        # Get the start and end times from the request
-        start_time = request.json.get('start_time')
-        end_time = request.json.get('end_time')
 
-        # Update the scheduler data
-        scheduler_data['start_time'] = start_time
-        scheduler_data['end_time'] = end_time
+        start_time =  datetime.strptime(request.json.get('start_time'),  '%H:%M').time()
+        end_time =  datetime.strptime(request.json.get('end_time'),  '%H:%M').time()
 
+        print(start_time, end_time)
+        scheduler_data = SchedulerData.query.first()
+        if not scheduler_data:
+            scheduler_data = SchedulerData()
+            db.session.add(scheduler_data)
+        scheduler_data.start_time = start_time
+        scheduler_data.end_time = end_time
+        db.session.commit()
         return jsonify({"message": "Scheduler updated successfully"}), 200
 
-    # Return the current scheduler data
-    return jsonify(scheduler_data), 200
-
+    scheduler_data = SchedulerData.query.first()
+    return jsonify({
+        "start_time": scheduler_data.start_time,
+        "end_time": scheduler_data.end_time
+    }), 200
 def generate_frames():
     try:
-        container = av.open(url)
+        container = av.open(url, options={'pixel_format': 'rgb24'})
         tonemap = cv2.createTonemapDrago(1.0, 0.7)
     except av.error.InvalidDataError as e:
         print(f"Failed to open stream: {e}")
@@ -123,6 +170,7 @@ def generate_frames():
             for frame in container.decode(video=0):
                 # Convert frame to numpy array in RGB format
                 image_rgb = frame.to_ndarray(format='rgb24')
+                #image_rgb = frame.to_rgb().to_ndarray()
                 image_rgb = cv2.resize(image_rgb, (320, 240))
 
                 # Convert RGB image to HDR (float32) format
@@ -135,7 +183,7 @@ def generate_frames():
                 image_ldr_8bit = cv2.normalize(image_ldr, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8UC3)
 
                 # Convert back to BGR for OpenCV display
-                image_bgr = cv2.cvtColor(image_ldr_8bit, cv2.COLOR_RGB2BGR)
+                image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
 
                 # Encode the frame in JPEG format
                 ret, buffer = cv2.imencode('.jpg', image_bgr)
@@ -149,7 +197,7 @@ def generate_frames():
             continue  # Continue attempting to read frames
 
 @app.route('/video_feed')
-# @login_required
+@login_required
 def video_feed():
     return Response(generate_frames(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
@@ -157,87 +205,145 @@ def video_feed():
 # API endpoint to receive sensor data from ESP32
 
 @app.route('/api/sensor', methods=['GET', 'POST'])
-def api_sensor(cc):
-    global sensor_states
+def api_sensor():
     if request.method == 'POST':
         data = request.json
         sensor_name = data.get('name')
         sensor_value = data.get('value')
-        print(sensor_name)
-        print(sensor_value)
-        if sensor_name in sensor_states:
-            sensor_states[sensor_name] = sensor_value
 
+        sensor_data = SensorState.query.first()
+        if not sensor_data:
+            sensor_data = SensorState()
+            db.session.add(sensor_data)
+            db.session.commit()
+
+        if sensor_name in ['pm25_state', 'rcwl_state', 'lock_state']:
+            if sensor_name == 'pm25_state':
+                sensor_data.pm25_state = bool(int(sensor_value))
+                if bool(int(sensor_value)):
+                    new_alert = Alert(status="Smoke Detected")
+                    db.session.add(new_alert)
+            elif sensor_name == 'rcwl_state':
+                sensor_data.rcwl_state = bool(int(sensor_value))
+                if bool(int(sensor_value)):
+                    new_alert = Alert(status="Motion Detected")
+                    db.session.add(new_alert)
+            elif sensor_name == 'lock_state':
+                sensor_data.lock_state = bool(int(sensor_value))
+                if bool(int(sensor_value)):
+                    new_alert = Alert(status="State Lock Change Detected")
+                    db.session.add(new_alert)
+
+            db.session.commit()
             return jsonify({"message": "Sensor state updated successfully"}), 200
         else:
             return jsonify({"message": "Invalid sensor name"}), 400
     else:
-        return jsonify(sensor_states), 200
+        sensor_data = SensorState.query.first()
+        if not sensor_data:
+            sensor_data = SensorState()
+            db.session.add(sensor_data)
+            db.session.commit()
+
+        return jsonify({
+            "pm25_state": str(int(sensor_data.pm25_state)),
+            "rcwl_state": str(int(sensor_data.rcwl_state)),
+            "lock_state": str(int(sensor_data.lock_state))
+        }), 200
+
 
 # API endpoint to get and set the lock state
 @app.route('/api/lock_state', methods=['GET', 'POST'])
 def api_lock_state():
-    global lock_state
     if request.method == 'POST':
         data = request.json
-        lock_state = int(data.get('lock_state'))
-        sensor_states["lock_state"] = str(lock_state)
+        lock_state = bool(int(data.get('lock_state')))
+
+        sensor_data = SensorState.query.first()
+        if not sensor_data:
+            sensor_data = SensorState(lock_state=lock_state)
+            db.session.add(sensor_data)
+
+            new_alert = Alert(status="State Lock Change Detected")
+            db.session.add(new_alert)
+        else:
+            sensor_data.lock_state = lock_state
+
+        db.session.commit()
         return jsonify({"message": "Lock state updated successfully", "lock_state": lock_state}), 200
     else:
-        return jsonify({"lock_state": lock_state}), 200
+        sensor_data = SensorState.query.order_by(SensorState.id.desc()).first()
+        print(sensor_data)
+        if not sensor_data:
+            return jsonify({"message": "No sensor data found", "lock_state": 0}), 404
+
+        return jsonify({"lock_state": sensor_data.lock_state}), 200
+
 
 @app.route('/api/scheduler', methods=['GET', 'POST'])
 def schedulerApi():
     if request.method == 'POST':
-        # Get the start and end times from the request
         start_time = request.json.get('start_time')
         end_time = request.json.get('end_time')
 
-        # Update the scheduler data
-        scheduler_data['start_time'] = start_time
-        scheduler_data['end_time'] = end_time
+        scheduler_data = SchedulerData.query.first()
+        if not scheduler_data:
+            scheduler_data = SchedulerData(start_time=start_time, end_time=end_time)
+            db.session.add(scheduler_data)
+        else:
+            scheduler_data.start_time = start_time
+            scheduler_data.end_time = end_time
 
+        db.session.commit()
         return jsonify({"message": "Scheduler updated successfully"}), 200
 
     elif request.method == 'GET':
-        # Get current time
+        scheduler_data = SchedulerData.query.first()
+        if not scheduler_data:
+            return jsonify({"message": "No scheduler data found"}), 404
+
         now = datetime.now()
-
-        # Parse the end_time from scheduler_data
-        end_time = datetime.fromisoformat(scheduler_data['end_time']) if scheduler_data['end_time'] else now
-
-        # Determine if the current time is past the end_time
+        end_time = scheduler_data.end_time if scheduler_data.end_time else now
         state = "overdue" if now > end_time else "underdue"
-        scheduler_data_with_state = scheduler_data.copy()
-        scheduler_data_with_state["state"] = state
 
-        return jsonify(scheduler_data_with_state), 200
+        return jsonify({
+            "start_time": scheduler_data.start_time,
+            "end_time": scheduler_data.end_time,
+            "state": state
+        }), 200
+
 
 # API endpoint to get and post alerts
 @app.route('/api/alerts', methods=['GET', 'POST'])
 def alerts_api():
-    global alerts
     if request.method == 'POST':
-        # Get alert data from the request
-        alert = request.json
-        alerts.append(alert)
+        alert_data = request.json
+        new_alert = Alert(status=alert_data['status'])
+        db.session.add(new_alert)
+        db.session.commit()
         return jsonify({"message": "Alert added successfully"}), 200
 
-    # Return the list of alerts
-    return jsonify(alerts), 200
+    alerts = Alert.query.order_by(Alert.id.desc()).all()
+    return jsonify([{
+        "id": alert.id,
+        "timestamp": alert.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+        "status": alert.status
+    } for alert in alerts]), 200
+
 
 # Register route for new users (for testing purposes, you might want to limit this in a real application)
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        print(request.form)
+        nama = request.form['nama']
         username = request.form['username']
         password = request.form['password']
-        if username in [u.username for u in users.values()]:
+        if User.query.filter_by(username=username).first():
             flash('Username already exists')
         else:
-            user_id = str(len(users) + 1)
-            users[user_id] = User(user_id, username, password)
+            new_user = User(nama=nama,username=username, password=password)
+            db.session.add(new_user)
+            db.session.commit()
             flash('User registered successfully')
             return redirect(url_for('login'))
     return render_template('routes/register.html')
